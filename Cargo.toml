@@ -1,6 +1,6 @@
 [package]
 name = "battery-tray"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Tray icons with battery levels of Bluetooth and Logitech wireless accessories"
 license = "MIT"
