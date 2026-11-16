@@ -107,22 +107,49 @@ fn light_taskbar() -> bool {
     reg_dword("Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize", "SystemUsesLightTheme") == Some(1)
 }
 
-fn autostart_enabled() -> bool {
-    let (s, v) = (wide(RUN_KEY), wide(RUN_VALUE));
-    unsafe { RegGetValueW(HKEY_CURRENT_USER, PCWSTR(s.as_ptr()), PCWSTR(v.as_ptr()), RRF_RT_REG_SZ, None, None, None) == ERROR_SUCCESS }
+/// The command Windows should run at sign-in: this exe, quoted.
+fn autostart_command() -> Option<String> {
+    std::env::current_exe().ok().map(|exe| format!("\"{}\"", exe.display()))
 }
 
-fn set_autostart(on: bool) {
+fn autostart_value() -> Option<String> {
     let (s, v) = (wide(RUN_KEY), wide(RUN_VALUE));
-    unsafe {
-        if on {
-            let Ok(exe) = std::env::current_exe() else { return };
-            let data = wide(&format!("\"{}\"", exe.display()));
-            let _ = RegSetKeyValueW(HKEY_CURRENT_USER, PCWSTR(s.as_ptr()), PCWSTR(v.as_ptr()), REG_SZ.0, Some(data.as_ptr() as *const c_void), (data.len() * 2) as u32);
-        } else {
-            let _ = RegDeleteKeyValueW(HKEY_CURRENT_USER, PCWSTR(s.as_ptr()), PCWSTR(v.as_ptr()));
-        }
+    let mut buf = [0u16; 1024];
+    let mut size = (buf.len() * 2) as u32;
+    let r = unsafe {
+        RegGetValueW(HKEY_CURRENT_USER, PCWSTR(s.as_ptr()), PCWSTR(v.as_ptr()), RRF_RT_REG_SZ, None, Some(buf.as_mut_ptr() as *mut c_void), Some(&mut size))
+    };
+    (r == ERROR_SUCCESS).then(|| util::from_wide(&buf))
+}
+
+/// On only when the Run entry exists and points at this exe (a stale path from an old location counts as off).
+fn autostart_enabled() -> bool {
+    match (autostart_value(), autostart_command()) {
+        (Some(v), Some(c)) => v.trim().eq_ignore_ascii_case(&c),
+        _ => false,
     }
+}
+
+fn set_autostart(on: bool) -> Result<(), String> {
+    let (s, v) = (wide(RUN_KEY), wide(RUN_VALUE));
+    let r = unsafe {
+        if on {
+            let cmd = autostart_command().ok_or("couldn't find this program's path")?;
+            let data = wide(&cmd);
+            RegSetKeyValueW(HKEY_CURRENT_USER, PCWSTR(s.as_ptr()), PCWSTR(v.as_ptr()), REG_SZ.0, Some(data.as_ptr() as *const c_void), (data.len() * 2) as u32)
+        } else {
+            let r = RegDeleteKeyValueW(HKEY_CURRENT_USER, PCWSTR(s.as_ptr()), PCWSTR(v.as_ptr()));
+            if r == ERROR_FILE_NOT_FOUND { ERROR_SUCCESS } else { r }
+        }
+    };
+    if r != ERROR_SUCCESS {
+        return Err(format!("Windows returned error {}", r.0));
+    }
+    // Read back so the menu never claims something that didn't stick.
+    if autostart_enabled() != on {
+        return Err("the setting didn't stick when read back".into());
+    }
+    Ok(())
 }
 
 fn icon_size() -> i32 {
@@ -469,7 +496,12 @@ unsafe fn handle_command(hwnd: HWND, cmd: usize, key: Option<String>, hidden: Ve
                 a.check_alerts();
             });
         }
-        ID_AUTOSTART => set_autostart(!autostart_enabled()),
+        ID_AUTOSTART => {
+            if let Err(e) = set_autostart(!autostart_enabled()) {
+                let text = wide(&format!("Couldn't change \"Start with Windows\": {e}."));
+                MessageBoxW(hwnd, PCWSTR(text.as_ptr()), w!("Battery Tray"), MB_OK | MB_ICONWARNING);
+            }
+        }
         ID_REFRESH => {
             with_app(|a| a.refresh.send(()));
         }
