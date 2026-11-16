@@ -32,6 +32,19 @@ Diagnostics:
 To update the copy you run: exit Battery Tray from its menu, then copy `target\release\battery-tray.exe`
 to `bin\` (not tracked by git) and start it again. Point "Start with Windows" at `bin\battery-tray.exe`.
 
+## Releases
+GitHub Actions ([.github/workflows/build.yml](.github/workflows/build.yml)) builds and tests every push and
+pull request, using the same GNU toolchain as local builds. To release:
+
+1. Bump `version` in `Cargo.toml`, run `cargo build` (updates `Cargo.lock`), and commit.
+2. Tag and push: `git tag v0.2.0` then `git push origin v0.2.0`.
+3. The workflow packages `battery-tray-<version>-windows-x64.zip` (exe, README, LICENSE) plus
+   `SHA256SUMS.txt` and creates a **draft** release. Review the notes on GitHub and publish it.
+
+The tag must match the version in `Cargo.toml`, or the workflow stops. To package locally instead:
+`pwsh -File tools\package.ps1 -Version 0.2.0` after a release build. The workflow marks where code
+signing will go once it's set up.
+
 ## Icon, name and version
 `build.rs` embeds `assets/battery-tray.ico`, version info ("Battery Tray", version from `Cargo.toml`)
 and a manifest (common controls v6, per-monitor DPI, `asInvoker`). It writes the resource object
@@ -42,6 +55,7 @@ itself, so no `rc.exe`/`windres` is needed. Regenerate the icon with `pwsh -File
 - `build.rs` – embeds icon, version info and manifest
 - `tools/probe/` – PowerShell discovery script that lists every device with a readable battery
 - `tools/make-icon.ps1` – draws the app icon
+- `tools/package.ps1` – builds the release zip and checksums
 - `src/main.rs` – hidden window, tray icons, menu, worker thread
 - `src/providers/bluetooth.rs`, `src/providers/logitech.rs` – battery sources
 - `src/render.rs` – icon drawing (Segoe Fluent Icons glyph + level bar, or number)

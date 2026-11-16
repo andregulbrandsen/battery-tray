@@ -1,0 +1,72 @@
+# Builds and tests on every push to main and every pull request.
+# A pushed tag like v0.2.0 also packages the exe and creates a draft GitHub release with it.
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write # needed only to create the release on tag pushes
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust (GNU toolchain, same as local builds)
+        run: |
+          rustup toolchain install stable-x86_64-pc-windows-gnu --profile minimal
+          rustup default stable-x86_64-pc-windows-gnu
+          rustc -vV
+
+      - name: Read version
+        id: version
+        run: |
+          $v = (Select-String -Path Cargo.toml -Pattern '^version = "(.+)"').Matches[0].Groups[1].Value
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne "v$v") {
+            throw "Tag $env:GITHUB_REF_NAME doesn't match the version in Cargo.toml ($v)"
+          }
+          "version=$v" >> $env:GITHUB_OUTPUT
+
+      - name: Test
+        run: cargo test --release --locked
+
+      - name: Build
+        run: cargo build --release --locked
+
+      # Code signing goes here once it's set up (SignPath or Microsoft's cloud signing):
+      # sign target\release\battery-tray.exe before it's packaged.
+
+      - name: Package
+        run: ./tools/package.ps1 -Version ${{ steps.version.outputs.version }}
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: battery-tray-${{ steps.version.outputs.version }}-windows-x64
+          path: |
+            target/dist/*.zip
+            target/dist/SHA256SUMS.txt
+
+      - name: Create draft release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = $env:GITHUB_REF_NAME
+          $files = (Get-ChildItem target/dist -File).FullName
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $tag @files --clobber
+          } else {
+            gh release create $tag @files --draft --title "Battery Tray $($tag.TrimStart('v'))" --generate-notes
+          }
+          if ($LASTEXITCODE -ne 0) { throw "gh release failed" }
