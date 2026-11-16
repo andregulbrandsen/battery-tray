@@ -1,4 +1,8 @@
+use windows::core::PCWSTR;
 use windows::Win32::System::SystemInformation::GetLocalTime;
+
+/// Resource id of the app icon embedded by build.rs (MAKEINTRESOURCE(1)).
+pub const APP_ICON: PCWSTR = PCWSTR(1 as *const u16);
 
 pub fn wide(s: &str) -> Vec<u16> {
     s.encode_utf16().chain(std::iter::once(0)).collect()

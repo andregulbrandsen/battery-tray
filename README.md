@@ -32,8 +32,16 @@ Diagnostics:
 To update the copy you run: exit Battery Tray from its menu, then copy `target\release\battery-tray.exe`
 to `bin\` (not tracked by git) and start it again. Point "Start with Windows" at `bin\battery-tray.exe`.
 
+## Icon, name and version
+`build.rs` embeds `assets/battery-tray.ico`, version info ("Battery Tray", version from `Cargo.toml`)
+and a manifest (common controls v6, per-monitor DPI, `asInvoker`). It writes the resource object
+itself, so no `rc.exe`/`windres` is needed. Regenerate the icon with `pwsh -File tools\make-icon.ps1`
+(add `-Preview` for a contact sheet in `assets\icon-preview.png`).
+
 ## Layout
+- `build.rs` – embeds icon, version info and manifest
 - `tools/probe/` – PowerShell discovery script that lists every device with a readable battery
+- `tools/make-icon.ps1` – draws the app icon
 - `src/main.rs` – hidden window, tray icons, menu, worker thread
 - `src/providers/bluetooth.rs`, `src/providers/logitech.rs` – battery sources
 - `src/render.rs` – icon drawing (Segoe Fluent Icons glyph + level bar, or number)

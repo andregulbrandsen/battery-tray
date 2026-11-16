@@ -611,7 +611,13 @@ fn main() {
         }
         let inst: HINSTANCE = GetModuleHandleW(None).unwrap_or_default().into();
         let class = w!("BatteryTrayWindow");
-        let wc = WNDCLASSW { lpfnWndProc: Some(wndproc), hInstance: inst, lpszClassName: class, ..Default::default() };
+        let wc = WNDCLASSW {
+            lpfnWndProc: Some(wndproc),
+            hInstance: inst,
+            lpszClassName: class,
+            hIcon: LoadIconW(inst, util::APP_ICON).unwrap_or_default(),
+            ..Default::default()
+        };
         RegisterClassW(&wc);
         let Ok(hwnd) = CreateWindowExW(WINDOW_EX_STYLE(0), class, w!("Battery Tray"), WS_OVERLAPPED, 0, 0, 0, 0, None, None, inst, None) else {
             return;

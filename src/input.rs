@@ -55,6 +55,7 @@ pub fn prompt(title: &str, label: &str, initial: &str) -> Option<String> {
             lpszClassName: class,
             hbrBackground: HBRUSH((COLOR_WINDOW.0 + 1) as _),
             hCursor: LoadCursorW(None, IDC_ARROW).unwrap_or_default(),
+            hIcon: LoadIconW(inst, crate::util::APP_ICON).unwrap_or_default(),
             ..Default::default()
         };
         RegisterClassW(&wc); // fails harmlessly when already registered
