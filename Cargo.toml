@@ -3,6 +3,8 @@ name = "battery-tray"
 version = "0.1.0"
 edition = "2021"
 description = "Tray icons with battery levels of Bluetooth and Logitech wireless accessories"
+license = "MIT"
+repository = "https://github.com/andregulbrandsen/battery-tray"
 
 [dependencies.windows]
 version = "0.58.0"

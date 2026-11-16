@@ -47,3 +47,6 @@ itself, so no `rc.exe`/`windres` is needed. Regenerate the icon with `pwsh -File
 - `src/render.rs` – icon drawing (Segoe Fluent Icons glyph + level bar, or number)
 - `src/config.rs` – settings file
 - `src/input.rs` – rename prompt
+
+## License
+MIT, see [LICENSE](LICENSE).
