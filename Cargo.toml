@@ -1,0 +1,33 @@
+[package]
+name = "battery-tray"
+version = "0.1.0"
+edition = "2021"
+description = "Tray icons with battery levels of Bluetooth and Logitech wireless accessories"
+
+[dependencies.windows]
+version = "0.58.0"
+features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_UI_Shell",
+    "Win32_UI_HiDpi",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_Graphics_Gdi",
+    "Win32_System_LibraryLoader",
+    "Win32_System_IO",
+    "Win32_System_Threading",
+    "Win32_System_Registry",
+    "Win32_System_SystemInformation",
+    "Win32_Storage_FileSystem",
+    "Win32_Devices_HumanInterfaceDevice",
+    "Win32_Devices_DeviceAndDriverInstallation",
+    "Win32_Devices_Properties",
+]
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
